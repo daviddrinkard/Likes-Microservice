@@ -3,10 +3,10 @@ const likesController = require("../controllers/likes.controller");
 
 const router = express.Router();
 
-// POST /api/likes -> set the like relation for a (userId, locationId)
-router.post("/", likesController.setLike);
+// POST /api/likes/location -> store the like relation for (userId, locationId)
+router.post("/location", likesController.addLike);
 
-// GET /api/likes?userId=...&locationId=... -> is this location liked by the user?
-router.get("/", likesController.getLike);
+// GET /api/likes/location/status?userId=...&locationId=... -> is it liked?
+router.get("/location/status", likesController.getLikeStatus);
 
 module.exports = router;
