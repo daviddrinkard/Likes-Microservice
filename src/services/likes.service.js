@@ -3,17 +3,24 @@ const supabase = require("../config/supabase");
 // Join table in the Arcadia schema: (user_id uuid, location_id int), composite PK.
 const LIKES_TABLE = process.env.LIKES_TABLE || "user_liked_locations";
 
-// Set (create) the like relation between a user and a location.
-// Upsert so calling it again on an already-liked location is a no-op rather
-// than a primary-key conflict.
-async function setLike({ userId, locationId }) {
+// Postgres unique-violation error code (raised when the composite PK already
+// holds this (user_id, location_id) pair).
+const UNIQUE_VIOLATION = "23505";
+
+// Create the like relation between a user and a location.
+// Returns { created: true } when a new row was inserted, or { created: false }
+// when the user had already liked the location (no duplicate is stored — the
+// composite primary key guarantees uniqueness).
+async function addLike({ userId, locationId }) {
   const { error } = await supabase
     .from(LIKES_TABLE)
-    .upsert(
-      { user_id: userId, location_id: locationId },
-      { onConflict: "user_id,location_id", ignoreDuplicates: true },
-    );
-  if (error) throw error;
+    .insert({ user_id: userId, location_id: locationId });
+
+  if (error) {
+    if (error.code === UNIQUE_VIOLATION) return { created: false };
+    throw error;
+  }
+  return { created: true };
 }
 
 // Return whether the given user has liked the given location.
@@ -28,6 +35,6 @@ async function isLiked({ userId, locationId }) {
 }
 
 module.exports = {
-  setLike,
+  addLike,
   isLiked,
 };
